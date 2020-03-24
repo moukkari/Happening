@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/idTitle" />
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/title"
+        android:hint="Title" />
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/description"
+        android:lines="5"
+        android:hint="Description" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Creation date:" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/dateToday"
+        android:enabled="false"
+        android:hint="Date" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Due Date" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Set due date"
+        android:id="@+id/dueDateTV" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Due Time" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Set due time"
+        android:id="@+id/dueTimeTV" />
+
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="\nRemind me in x before"
+        android:id="@+id/reminderTV"
+        android:visibility="gone" />
+    <LinearLayout
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:id="@+id/reminder"
+        android:orientation="horizontal" >
+
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:hint="Days"
+            android:id="@+id/remindDays"
+            android:visibility="gone" />
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint="Hours"
+            android:inputType="number"
+            android:id="@+id/remindHours"
+            android:visibility="gone" />
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint="Minutes"
+            android:inputType="number"
+            android:id="@+id/remindMinutes"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- These are meant to be implemented later on
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="\nType" />
+    <Spinner
+        android:id="@+id/newTaskSpinner"
+        android:layout_height="wrap_content"
+        android:prompt="@string/taskType2"
+        android:layout_width="fill_parent"
+        android:entries="@array/taskTypeList">
+    </Spinner>
+
+    <CheckBox
+        android:id="@+id/CheckBoxResponse"
+        android:layout_height="wrap_content"
+        android:text="@string/newTaskCheckBox"
+        android:layout_width="fill_parent">
+    </CheckBox>
+    -->
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Delete"
+        android:visibility="gone"
+        android:id="@+id/delete" />
+
+</LinearLayout>

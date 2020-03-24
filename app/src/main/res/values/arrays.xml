@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="taskTypeList">
+        <item>@string/taskType1</item>
+        <item>@string/taskType2</item>
+        <item>@string/taskType3</item>
+        <item>@string/taskType4</item>
+    </string-array>
+</resources>
