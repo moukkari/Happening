@@ -36,6 +36,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -67,16 +68,17 @@ public class MainActivity extends AppCompatActivity {
     // [END declare_auth]
     private String user_id;
 
-    private ArrayList<MainTask> LocalDatabase = new ArrayList<MainTask>(0);
+    private ArrayList<MainTask> LOCALDATABASE = new ArrayList<MainTask>(0);
 
     // For test purposes only -->
     // testdatabase data is going to be sent to/replaced by a SQL database
     // the auto-incrementing id number is going to be fetched from the database
-    private int tmpIdCounter = 0;
+    private int BIGGEST_ID = 0;
     // Ends here
 
     private TextView loginStatusTV;
-    private Button signinButton, signoutButton, addTaskButton;
+    private Button signoutButton, addTaskButton;
+    private SignInButton signinButton;
     private TaskDialog taskDialog;
     private ListView taskLV;
     private LocalDate dateNow = LocalDate.now();
@@ -89,8 +91,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         createNotificationChannel();
 
+        taskLV = (ListView) findViewById(R.id.taskMonitor);
+        View header = View.inflate(this, R.layout.taskheader, null);
+        taskLV.addHeaderView(header);
+
         loginStatusTV = (TextView) findViewById(R.id.signedInStatus);
-        signinButton = (Button) findViewById(R.id.signinButton);
+        signinButton = (SignInButton) findViewById(R.id.signinButton);
+        // SignInButton's listener can't be registered via xml
+        signinButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                signInClicked(v);
+            }
+        });
         signoutButton = (Button) findViewById(R.id.signoutButton);
         addTaskButton = (Button) findViewById(R.id.addTaskButton);
 
@@ -104,21 +117,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
-
-        // The following is for database test purposes only -->
-        /*
-        MainTask newTask = new MainTask(tmpIdCounter++, "title1", "Desc1", dateNow, dateNow.plusDays(7), timeNow);
-        MainTask newTask2 = new MainTask(tmpIdCounter++, "title2", "Desc2", dateNow, dateNow.plusDays(7), timeNow);
-        MainTask newTask3 = new MainTask(tmpIdCounter++, "title3", "Desc3", dateNow, dateNow.plusDays(7), timeNow);
-        MainTask newTask4 = new MainTask(tmpIdCounter++, "title4", "Desc4", dateNow, dateNow.plusDays(7), timeNow);
-        testDataBase.add(newTask);
-        testDataBase.add(newTask2);
-        testDataBase.add(newTask3);
-        testDataBase.add(newTask4);
-        updateTaskMonitor();
-         */
-
-        // Ends here
     }
 
     @Override
@@ -198,23 +196,25 @@ public class MainActivity extends AppCompatActivity {
             signinButton.setVisibility(View.GONE);
             signoutButton.setVisibility(View.VISIBLE);
             addTaskButton.setVisibility(View.VISIBLE);
+            taskLV.setVisibility(View.VISIBLE);
 
             retrieveDataFromFirebase();
 
         } else {
             Log.d("TAG","Failed.");
             loginStatusTV.setText("Not logged in.");
-            LocalDatabase.clear();
+            LOCALDATABASE.clear();
 
             signinButton.setVisibility(View.VISIBLE);
             signoutButton.setVisibility(View.GONE);
             addTaskButton.setVisibility(View.GONE);
+            taskLV.setVisibility(View.GONE);
         }
     }
     public void retrieveDataFromFirebase() {
-        Log.d("TAG", "id: " + user_id);
-
         user_id = mAuth.getCurrentUser().getUid();
+
+        Log.d("TAG", "id: " + user_id);
 
         reference = FirebaseDatabase.getInstance().getReference().child(user_id);
 
@@ -222,14 +222,17 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
 
-                LocalDatabase.clear();
-
-                Log.d("TAG", "LOG: " + dataSnapshot.getValue());
+                LOCALDATABASE.clear();
 
                 DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
 
                 for (DataSnapshot childDataSnapshot : dataSnapshot.getChildren()) {
+                    // Get the biggest id to avoid same id numbers
+                    if (Integer.parseInt(childDataSnapshot.getKey()) >= BIGGEST_ID) {
+                        BIGGEST_ID = Integer.parseInt(childDataSnapshot.getKey()) + 1;
+                    }
+
                     LocalDate fireCreationDate = LocalDate.parse(childDataSnapshot.child("creationDate").getValue().toString(), dateFormat);
                     LocalDate fireDueDate = LocalDate.parse(childDataSnapshot.child("dueDate").getValue().toString(), dateFormat);
                     LocalTime fireDueTime = LocalTime.parse(childDataSnapshot.child("dueTime").getValue().toString(), timeFormat);
@@ -241,10 +244,10 @@ public class MainActivity extends AppCompatActivity {
                             fireDueDate,
                             fireDueTime);
 
-                    LocalDatabase.add(tmpTask);
+                    LOCALDATABASE.add(tmpTask);
                     updateTaskMonitor();
                 }
-
+                Log.d("TAG", "THE BIGGEST ID: " + BIGGEST_ID);
             }
 
             @Override
@@ -262,7 +265,7 @@ public class MainActivity extends AppCompatActivity {
         reference = FirebaseDatabase.getInstance().getReference().child(user_id);
 
         // Make an empty task object which has a default due date a week forward from now on
-        MainTask tmpTask = new MainTask(tmpIdCounter++, "", "", dateNow,
+        MainTask tmpTask = new MainTask(BIGGEST_ID, "", "", dateNow,
                 dateNow.plusDays(7), timeNow);
         // Sends data to Taskdialog, flag=false determines that the task already exists
         taskDialog = new TaskDialog().newInstance(tmpTask, true);
@@ -299,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
                         newTask.getDueDate().toString(),
                         newTask.getDueTime().toString());
 
-                reference.child(String.valueOf(tmpIdCounter)).setValue(newFireTask);
+                reference.child(String.valueOf(BIGGEST_ID++)).setValue(newFireTask);
                 Log.d("TAG", "Sent data to Firebase");
 
 
@@ -314,19 +317,15 @@ public class MainActivity extends AppCompatActivity {
     // Updates the list of tasks
     // Clicking a task opens editTask where you can edit the task
     public void updateTaskMonitor() {
-        taskLV = (ListView) findViewById(R.id.taskMonitor);
-        ArrayAdapter<MainTask> adapter;
-        adapter = new ArrayAdapter<MainTask>(
-                getApplicationContext(),
-                android.R.layout.simple_list_item_1,
-                android.R.id.text1,
-                LocalDatabase);
+        TaskAdapter adapter = new TaskAdapter(this, LOCALDATABASE);
         taskLV.setAdapter(adapter);
+
 
         taskLV.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                MainTask value = LocalDatabase.get(position);
+                // -1 because of the header
+                MainTask value = LOCALDATABASE.get(position - 1);
                 editTask(value);
             }
         });
@@ -342,7 +341,11 @@ public class MainActivity extends AppCompatActivity {
             public void finish(int id, String title, String description, String creation,
                                String dueDate, String dueTime,
                                int alarmD, int alarmH, int alarmM){
-                for(MainTask task : LocalDatabase) {
+                Log.d("TAG", "Editing task");
+
+                reference = FirebaseDatabase.getInstance().getReference().child(user_id);
+
+                for(MainTask task : LOCALDATABASE) {
                     if(task.getMainId() == id) {
                         task.setTitle(title);
                         task.setDescription(description);
@@ -352,6 +355,10 @@ public class MainActivity extends AppCompatActivity {
                         LocalTime duetime = LocalTime.parse(dueTime, dtf);
                         task.setDueDate(duedate);
                         task.setDueTime(duetime);
+
+                        FireBaseTask newEditedFireTask = new FireBaseTask(id, title, description,
+                                creation, dueDate, dueTime);
+                        reference.child(String.valueOf(id)).setValue(newEditedFireTask);
                     }
                 }
                 updateTaskMonitor();
@@ -359,7 +366,10 @@ public class MainActivity extends AppCompatActivity {
             public void deleteTask(String id) {
                 Log.d("TAG", "Deleted: " + id);
                 final int deleteId = Integer.parseInt(id);
-                LocalDatabase.removeIf(obj -> obj.getMainId() == deleteId);
+                LOCALDATABASE.removeIf(obj -> obj.getMainId() == deleteId);
+
+                reference = FirebaseDatabase.getInstance().getReference().child(user_id);
+                reference.child(id).removeValue();
 
                 taskDialog.dismiss();
                 updateTaskMonitor();

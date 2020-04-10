@@ -87,6 +87,10 @@ public class TaskDialog extends AppCompatDialogFragment {
         final String id = String.valueOf(getArguments().getInt("id"));
         idTV.setText(id);
 
+        remindInHours = (EditText) view.findViewById(R.id.remindHours);
+        remindInDays = (EditText) view.findViewById(R.id.remindDays);
+        remindInMinutes = (EditText) view.findViewById(R.id.remindMinutes);
+
         // Checks if the task is new or editable
         if (!newTaskFlag) {
             String title = getArguments().getString("title");
@@ -112,9 +116,6 @@ public class TaskDialog extends AppCompatDialogFragment {
         } else {
             // The following is because alarm time editing is not yet implemented
             TextView remindTV = (TextView) view.findViewById(R.id.reminderTV);
-            remindInHours = (EditText) view.findViewById(R.id.remindHours);
-            remindInDays = (EditText) view.findViewById(R.id.remindDays);
-            remindInMinutes = (EditText) view.findViewById(R.id.remindMinutes);
             remindTV.setVisibility(View.VISIBLE);
             remindInHours.setVisibility(View.VISIBLE);
             remindInDays.setVisibility(View.VISIBLE);
@@ -199,6 +200,12 @@ public class TaskDialog extends AppCompatDialogFragment {
                         String dueDate = dueDateTV.getText().toString();
                         String dueTime = dueTimeTV.getText().toString();
                         int id = Integer.parseInt(String.valueOf(idTV.getText()));
+
+
+                        Log.d("TAG", "Remind in days: " + remindInDays.getText().toString());
+                        Log.d("TAG", "Remind in hours: " + remindInHours.getText().toString());
+                        Log.d("TAG", "Remind in minutes: " + remindInMinutes.getText().toString());
+
 
                         // if user doesn't give any value to alarm reminder they're set to 0
                         int ad, ah, am;
