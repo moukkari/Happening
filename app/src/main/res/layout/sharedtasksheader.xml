@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#C0C0C0">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/sharedTitle"
+        android:text="Tasks shared with you" />
+    <TextView
+        android:id="@+id/sharedIdHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/sharedTitle"
+        android:layout_marginHorizontal="20dp"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:text="id"/>
+
+    <TextView
+        android:id="@+id/adapterTitleHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/sharedTitle"
+        android:layout_toRightOf="@id/sharedIdHeader"
+        android:layout_marginHorizontal="20dp"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:text="Title"/>
+    />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/sharedTitle"
+
+        android:layout_alignParentRight="true"
+        android:layout_marginHorizontal="20dp"
+        android:textSize="20sp"
+        android:id="@+id/adapterDueDateHeader"
+        android:text="Due      "
+        android:textStyle="bold"
+        />
+    />
+</RelativeLayout>

@@ -23,10 +23,8 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -57,6 +55,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     // Firebase stuff here
@@ -66,21 +65,24 @@ public class MainActivity extends AppCompatActivity {
     // [START declare_auth]
     private FirebaseAuth mAuth;
     // [END declare_auth]
-    private String user_id;
+    public String user_id;
+    private String user_mail;
 
+    private ArrayList<Friend> REQUESTS = new ArrayList<Friend>(0);
+    private ArrayList<Friend> FRIENDS = new ArrayList<Friend>(0);
     private ArrayList<MainTask> LOCALDATABASE = new ArrayList<MainTask>(0);
-
-    // For test purposes only -->
-    // testdatabase data is going to be sent to/replaced by a SQL database
-    // the auto-incrementing id number is going to be fetched from the database
+    private ArrayList<MainTask> SHAREDTASKS = new ArrayList<MainTask>(0);
+    private ArrayList<MainTask> COMPLETEDTASKS = new ArrayList<MainTask>(0);
     private int BIGGEST_ID = 0;
-    // Ends here
 
-    private TextView loginStatusTV;
-    private Button signoutButton, addTaskButton;
+    private TextView loginStatusTV, infoTV;
+    private Button signoutButton, addTaskButton, friendsButton;
     private SignInButton signinButton;
     private TaskDialog taskDialog;
+    private FriendsDialog friendsDialog;
     private ListView taskLV;
+    private ListView sharedTaskLV;
+    private ListView completedTaskLV;
     private LocalDate dateNow = LocalDate.now();
     private LocalTime timeNow = LocalTime.now().truncatedTo(ChronoUnit.MINUTES);
 
@@ -89,13 +91,23 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         createNotificationChannel();
+
+        sharedTaskLV = (ListView) findViewById(R.id.sharedTaskMonitor);
+        View sharedHeader = View.inflate(this, R.layout.sharedtasksheader, null);
+        sharedTaskLV.addHeaderView(sharedHeader);
+
+        completedTaskLV = (ListView) findViewById(R.id.completedTaskMonitor);
+        View completedHeader = View.inflate(this, R.layout.completedtasksheader, null);
+        completedTaskLV.addHeaderView(completedHeader);
 
         taskLV = (ListView) findViewById(R.id.taskMonitor);
         View header = View.inflate(this, R.layout.taskheader, null);
         taskLV.addHeaderView(header);
 
         loginStatusTV = (TextView) findViewById(R.id.signedInStatus);
+        infoTV = (TextView) findViewById(R.id.infoTextView);
         signinButton = (SignInButton) findViewById(R.id.signinButton);
         // SignInButton's listener can't be registered via xml
         signinButton.setOnClickListener(new View.OnClickListener() {
@@ -106,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
         });
         signoutButton = (Button) findViewById(R.id.signoutButton);
         addTaskButton = (Button) findViewById(R.id.addTaskButton);
+        friendsButton = (Button) findViewById(R.id.friendsButton);
 
         // Configure Google Sign In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -127,32 +140,27 @@ public class MainActivity extends AppCompatActivity {
         updateUI(currentUser);
     }
     public void signInClicked(View v) {
-        Log.d("TAG", "SIGNING IN");
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.d("TAG", "ONACTIVITYRESULT");
+
 
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            Log.d("TAG", "TASK: " + task);
             try {
                 // Google Sign In was successful, authenticate with Firebase
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 firebaseAuthWithGoogle(account);
             } catch (ApiException e) {
-                // Google Sign In failed, update UI appropriately
-                Log.d("TAG", "Google sign in failed", e);
-                // ...
+                Toast.makeText(this, "Google sign in failed", Toast.LENGTH_SHORT).show();
             }
         }
     }
     private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
-        Log.d("TAG", "firebaseAuthWithGoogle:" + acct.getId());
 
         AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
         mAuth.signInWithCredential(credential)
@@ -161,12 +169,10 @@ public class MainActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
-                            Log.d("TAG", "signInWithCredential:success");
                             FirebaseUser user = mAuth.getCurrentUser();
                             updateUI(user);
                         } else {
                             // If sign in fails, display a message to the user.
-                            Log.d("TAG", "signInWithCredential:failure", task.getException());
                             Toast.makeText(getApplicationContext(), "Authentication failed", Toast.LENGTH_SHORT).show();
                             updateUI(null);
                         }
@@ -190,44 +196,113 @@ public class MainActivity extends AppCompatActivity {
     }
     private void updateUI(FirebaseUser user) {
         if (user != null) {
-            Log.d("TAG", "DATA: " + user.getEmail() + ", " + user.getUid());
             loginStatusTV.setText("Logged in as " + user.getEmail());
 
             signinButton.setVisibility(View.GONE);
             signoutButton.setVisibility(View.VISIBLE);
             addTaskButton.setVisibility(View.VISIBLE);
+            friendsButton.setVisibility(View.VISIBLE);
+            sharedTaskLV.setVisibility(View.VISIBLE);
             taskLV.setVisibility(View.VISIBLE);
-
+            completedTaskLV.setVisibility(View.VISIBLE);
             retrieveDataFromFirebase();
+            databaseSetUp();
 
         } else {
-            Log.d("TAG","Failed.");
             loginStatusTV.setText("Not logged in.");
             LOCALDATABASE.clear();
-
+            SHAREDTASKS.clear();
+            COMPLETEDTASKS.clear();
             signinButton.setVisibility(View.VISIBLE);
             signoutButton.setVisibility(View.GONE);
             addTaskButton.setVisibility(View.GONE);
+            friendsButton.setVisibility(View.GONE);
+            sharedTaskLV.setVisibility(View.GONE);
             taskLV.setVisibility(View.GONE);
+            completedTaskLV.setVisibility(View.GONE);
+
         }
     }
     public void retrieveDataFromFirebase() {
         user_id = mAuth.getCurrentUser().getUid();
+        user_mail = mAuth.getCurrentUser().getEmail();
 
-        Log.d("TAG", "id: " + user_id);
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
 
-        reference = FirebaseDatabase.getInstance().getReference().child(user_id);
-
+        reference = FirebaseDatabase.getInstance().getReference().child(user_id).child("shared");
         reference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-
-                LOCALDATABASE.clear();
-
-                DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm");
+                SHAREDTASKS.clear();
 
                 for (DataSnapshot childDataSnapshot : dataSnapshot.getChildren()) {
+                    for (DataSnapshot childOfChildShot : childDataSnapshot.getChildren()) {
+                        reference = FirebaseDatabase.getInstance().getReference()
+                                .child(childDataSnapshot.getKey()).child("database")
+                                .child(childOfChildShot.getKey());
+
+                        reference.addValueEventListener(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@NonNull DataSnapshot childShot) {
+                                if (childShot.getValue() != null) {
+
+                                    LocalDate fireCreationDate = LocalDate.parse(childShot.child("creationDate").getValue().toString(), dateFormat);
+                                    LocalDate fireDueDate = LocalDate.parse(childShot.child("dueDate").getValue().toString(), dateFormat);
+                                    LocalTime fireDueTime = LocalTime.parse(childShot.child("dueTime").getValue().toString(), timeFormat);
+
+                                    MainTask tmpTask = new MainTask(Integer.parseInt(childShot.child("mainId").getValue().toString()),
+                                            childShot.child("title").getValue().toString(),
+                                            childShot.child("desc").getValue().toString(),
+                                            fireCreationDate,
+                                            fireDueDate,
+                                            fireDueTime,
+                                            childShot.child("sharedBy").getValue().toString(),
+                                            childShot.child("isDone").getValue(Boolean.class));
+                                    for (MainTask task : SHAREDTASKS) {
+                                        if (task.getMainId() == tmpTask.getMainId() && task.getSharedBy().equals(tmpTask.getSharedBy())) {
+                                            SHAREDTASKS.remove(task);
+                                        }
+                                    }
+                                    if (!tmpTask.getIsDone()) {
+                                        SHAREDTASKS.add(tmpTask);
+                                    } else {
+                                        if (!COMPLETEDTASKS.contains(tmpTask)) {
+                                            COMPLETEDTASKS.add(tmpTask);
+                                        }
+                                    }
+
+                                    updateTaskMonitor();
+                                } else {
+                                    for (MainTask tmpTask : SHAREDTASKS) {
+                                        if (tmpTask.getMainId() == Integer.parseInt(childShot.getKey())) {
+                                            SHAREDTASKS.remove(tmpTask);
+                                        }
+                                    }
+                                    updateTaskMonitor();
+                                }
+
+                            }
+
+                            @Override
+                            public void onCancelled(@NonNull DatabaseError databaseError) { }
+                        });
+                    }
+
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) { }
+        });
+
+        reference = FirebaseDatabase.getInstance().getReference().child(user_id).child("database");
+        reference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                LOCALDATABASE.clear();
+
+                for (DataSnapshot childDataSnapshot : dataSnapshot.getChildren()) {
+
                     // Get the biggest id to avoid same id numbers
                     if (Integer.parseInt(childDataSnapshot.getKey()) >= BIGGEST_ID) {
                         BIGGEST_ID = Integer.parseInt(childDataSnapshot.getKey()) + 1;
@@ -242,50 +317,122 @@ public class MainActivity extends AppCompatActivity {
                             childDataSnapshot.child("desc").getValue().toString(),
                             fireCreationDate,
                             fireDueDate,
-                            fireDueTime);
+                            fireDueTime,
+                            childDataSnapshot.child("sharedBy").getValue().toString(),
+                            childDataSnapshot.child("isDone").getValue(Boolean.class));
 
-                    LOCALDATABASE.add(tmpTask);
+                    if (!tmpTask.getIsDone()) {
+                        LOCALDATABASE.add(tmpTask);
+                    } else {
+                        if (!COMPLETEDTASKS.contains(tmpTask)) {
+                            COMPLETEDTASKS.add(tmpTask);
+                        }
+                    }
+
                     updateTaskMonitor();
                 }
-                Log.d("TAG", "THE BIGGEST ID: " + BIGGEST_ID);
             }
 
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) { }
+        });
+    }
+
+    // Adds current user to (Firebase) database and fetches user's friends
+    public void databaseSetUp() {
+        reference = FirebaseDatabase.getInstance().getReference().child("users");
+        reference.child(user_id).setValue(user_mail);
+
+        reference = FirebaseDatabase.getInstance().getReference().child(user_id).child("friends");
+        reference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                FRIENDS.clear();
+                for (DataSnapshot childSnap : dataSnapshot.getChildren()) {
+                    FRIENDS.add(new Friend(childSnap.getKey(), childSnap.getValue().toString()));
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) { }
+        });
+
+        reference = FirebaseDatabase.getInstance().getReference().child(user_id).child("requests");
+
+        reference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                String requests = "";
+                REQUESTS.clear();
+                for (DataSnapshot childSnap : dataSnapshot.getChildren()) {
+                    requests += "New friend request from " + childSnap.getValue() + "\n";
+                    REQUESTS.add(new Friend(childSnap.getKey(), childSnap.getValue().toString()));
+                }
+                infoTV.setText(requests);
+
+            }
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
 
             }
         });
+
     }
 
+    public void showFriends(View v) {
+        friendsDialog = new FriendsDialog().newInstance(REQUESTS, FRIENDS, user_id, user_mail);
+        friendsDialog.show(getSupportFragmentManager(), "Edit friends");
+
+        friendsDialog.setFriends(new FriendsDialog.OnNewFriends() {
+            @Override
+            public void setNewFriends(ArrayList<Friend> requestArray, ArrayList<Friend> newFriends) {
+                FRIENDS = newFriends;
+                // reference = FirebaseDatabase.getInstance().getReference().child(user_id).child("friends");
+                for (Friend friend : FRIENDS) {
+                    reference = FirebaseDatabase.getInstance().getReference().child(friend.getKey()).child("friends");
+                    reference.child(user_id).setValue(user_mail);
+
+                    reference = FirebaseDatabase.getInstance().getReference().child(user_id).child("friends");
+                    for (Friend newFriend : FRIENDS) {
+                        reference.child(newFriend.getKey()).setValue(newFriend.getMail());
+                    }
+                }
+
+                REQUESTS = requestArray;
+                reference = FirebaseDatabase.getInstance().getReference().child(user_id).child("requests");
+                reference.removeValue();
+                for (Friend req : REQUESTS) {
+                    reference.child(req.getKey()).setValue(req.getMail());
+                }
+
+            }
+        });
+    }
 
     // Creates new task depending on the values set on pop-up dialog
     public void addNewTask(View v) {
-        Log.d("TAG", "ADD NEW TASK");
-
-        reference = FirebaseDatabase.getInstance().getReference().child(user_id);
-
         // Make an empty task object which has a default due date a week forward from now on
         MainTask tmpTask = new MainTask(BIGGEST_ID, "", "", dateNow,
-                dateNow.plusDays(7), timeNow);
+                dateNow.plusDays(7), timeNow, user_id, false);
         // Sends data to Taskdialog, flag=false determines that the task already exists
-        taskDialog = new TaskDialog().newInstance(tmpTask, true);
+        taskDialog = new TaskDialog().newInstance(tmpTask, FRIENDS, true, user_id);
         taskDialog.show(getSupportFragmentManager(), "New Task");
 
         taskDialog.setTaskResult(new TaskDialog.OnNewTaskResult(){
             // TaskDialog sends data here
-            public void finish(int id, String title, String description, String creation,
-                               String dueDate, String dueTime,
-                               int alarmD, int alarmH, int alarmM){
-                Log.d("TAG", "SET TASK RESULT FINISH");
-
+            public void edit(int id, String title, String description, String creation,
+                             String dueDate, String dueTime,
+                             int alarmD, int alarmH, int alarmM,
+                             ArrayList<Friend> selectedFriends, String sharedBy){
                 DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 LocalDate crtn = LocalDate.parse(creation, dtf);
                 LocalDate duedt = LocalDate.parse(dueDate, dtf);
                 dtf = DateTimeFormatter.ofPattern("HH:mm");
                 LocalTime duetm = LocalTime.parse(dueTime, dtf);
 
-                // Sends the new data with new data to the database
-                MainTask newTask = new MainTask(id,title, description, crtn, duedt, duetm);
+                // Sends the new data to the database
+                MainTask newTask = new MainTask(id,title, description, crtn, duedt, duetm,
+                        user_id, false);
                 // testDataBase.add(newTask);
 
                 // Sets the alarm time with given values before sending it setAlarm
@@ -295,20 +442,29 @@ public class MainActivity extends AppCompatActivity {
                 setAlarm(alarmDay, alarmTime, newTask);
 
                 // Send to Firebase
-                Log.d("TAG", "Sending data to Firebase");
                 Toast.makeText(getApplicationContext(), "Data inserted", Toast.LENGTH_SHORT).show();
                 FireBaseTask newFireTask = new FireBaseTask(newTask.getMainId(), newTask.getTitle(), newTask.getDesc(),
                         newTask.getCreationDate().toString(),
                         newTask.getDueDate().toString(),
-                        newTask.getDueTime().toString());
+                        newTask.getDueTime().toString(), newTask.getSharedBy(), newTask.getIsDone());
 
-                reference.child(String.valueOf(BIGGEST_ID++)).setValue(newFireTask);
-                Log.d("TAG", "Sent data to Firebase");
+                reference = FirebaseDatabase.getInstance().getReference().child(user_id).child("database");
+                reference.child(String.valueOf(BIGGEST_ID)).setValue(newFireTask);
 
+                for (Friend friend : selectedFriends) {
+                    reference = FirebaseDatabase.getInstance().getReference().child(friend.getKey()).child("shared");
+                    reference.child(user_id).child(String.valueOf(BIGGEST_ID)).setValue(BIGGEST_ID);
+                }
 
+                BIGGEST_ID++;
                 updateTaskMonitor();
             }
-            public void deleteTask(String id) { }
+
+            @Override
+            public void deleteTask(String id, String sharedBy) { }
+
+            @Override
+            public void completeTask(String id, String sharedBy) { }
         });
 
         updateTaskMonitor();
@@ -317,36 +473,65 @@ public class MainActivity extends AppCompatActivity {
     // Updates the list of tasks
     // Clicking a task opens editTask where you can edit the task
     public void updateTaskMonitor() {
+        TaskAdapter completedAdapter = new TaskAdapter(this, COMPLETEDTASKS);
+        completedTaskLV.setAdapter(completedAdapter);
+        completedTaskLV.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // -1 because of the header
+                MainTask value = COMPLETEDTASKS.get(position - 1);
+                editTask(value, true);
+            }
+        });
+
+        TaskAdapter sharedAdapter = new TaskAdapter(this, SHAREDTASKS);
+        sharedTaskLV.setAdapter(sharedAdapter);
+        sharedTaskLV.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // -1 because of the header
+                MainTask value = SHAREDTASKS.get(position - 1);
+                editTask(value, true);
+            }
+        });
+
         TaskAdapter adapter = new TaskAdapter(this, LOCALDATABASE);
         taskLV.setAdapter(adapter);
-
-
         taskLV.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 // -1 because of the header
                 MainTask value = LOCALDATABASE.get(position - 1);
-                editTask(value);
+                editTask(value, false);
             }
         });
     }
 
     // Opens TaskDialog and updates database with given information
     // Alarm time changing not yet implemented
-    public void editTask(MainTask taskToEdit) {
+    public void editTask(MainTask taskToEdit, boolean sharedTask) {
         // Sends data to Taskdialog, flag=false determines that the task already exists
-        taskDialog = new TaskDialog().newInstance(taskToEdit, false);
+        taskDialog = new TaskDialog().newInstance(taskToEdit, FRIENDS, false, user_id);
         taskDialog.show(getSupportFragmentManager(), "Edit Task");
         taskDialog.setTaskResult(new TaskDialog.OnNewTaskResult(){
-            public void finish(int id, String title, String description, String creation,
-                               String dueDate, String dueTime,
-                               int alarmD, int alarmH, int alarmM){
-                Log.d("TAG", "Editing task");
+            public void edit(int id, String title, String description, String creation,
+                             String dueDate, String dueTime,
+                             int alarmD, int alarmH, int alarmM,
+                             ArrayList<Friend> selectedFriends, String sharedBy){
 
-                reference = FirebaseDatabase.getInstance().getReference().child(user_id);
+                ArrayList<MainTask> selectedDataBase;
+                if (!sharedTask) {
+                    reference = FirebaseDatabase.getInstance().getReference()
+                            .child(user_id).child("database");
+                    selectedDataBase = LOCALDATABASE;
+                } else {
+                    reference = FirebaseDatabase.getInstance().getReference()
+                            .child(taskToEdit.getSharedBy()).child("database");
+                    selectedDataBase = SHAREDTASKS;
+                }
 
-                for(MainTask task : LOCALDATABASE) {
-                    if(task.getMainId() == id) {
+                for(MainTask task : selectedDataBase) {
+                    if(task.getMainId() == id && task.getSharedBy().equals(sharedBy)) {
                         task.setTitle(title);
                         task.setDescription(description);
                         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -357,22 +542,40 @@ public class MainActivity extends AppCompatActivity {
                         task.setDueTime(duetime);
 
                         FireBaseTask newEditedFireTask = new FireBaseTask(id, title, description,
-                                creation, dueDate, dueTime);
+                                creation, dueDate, dueTime, task.getSharedBy(), task.getIsDone());
                         reference.child(String.valueOf(id)).setValue(newEditedFireTask);
                     }
                 }
                 updateTaskMonitor();
             }
-            public void deleteTask(String id) {
-                Log.d("TAG", "Deleted: " + id);
+            public void deleteTask(String id, String sharedBy) {
                 final int deleteId = Integer.parseInt(id);
-                LOCALDATABASE.removeIf(obj -> obj.getMainId() == deleteId);
+                if (sharedBy.equals(user_id)) {
+                    LOCALDATABASE.removeIf(obj -> obj.getMainId() == deleteId);
 
-                reference = FirebaseDatabase.getInstance().getReference().child(user_id);
-                reference.child(id).removeValue();
+                    reference = FirebaseDatabase.getInstance().getReference().child(user_id)
+                            .child("database");
+                    reference.child(id).removeValue();
+                } else {
+                    SHAREDTASKS.removeIf(obj -> obj.getMainId() == deleteId);
+                    reference = FirebaseDatabase.getInstance().getReference().child(user_id)
+                            .child("shared").child(sharedBy);
 
+                    reference.child(id).removeValue();
+
+                    reference = FirebaseDatabase.getInstance().getReference().child(sharedBy)
+                            .child("database");
+                    reference.child(id).removeValue();
+                }
                 taskDialog.dismiss();
                 updateTaskMonitor();
+            }
+            @Override
+            public void completeTask(String id, String sharedBy) {
+                reference = FirebaseDatabase.getInstance().getReference().child(sharedBy)
+                        .child("database").child(id).child("isDone");
+                reference.setValue(true);
+                taskDialog.dismiss();
             }
         });
     }

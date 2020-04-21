@@ -3,52 +3,68 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/taskFriendMonitor" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/idTitle" />
+        android:id="@+id/idTitle"
+        android:layout_margin="10dp"/>
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/title"
-        android:hint="Title" />
+        android:hint="Title"
+        android:inputType="textAutoCorrect"
+        android:layout_marginHorizontal="10dp"/>
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/description"
         android:lines="5"
-        android:hint="Description" />
+        android:hint="Description"
+        android:inputType="textAutoCorrect"
+        android:layout_marginHorizontal="10dp"/>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Creation date:" />
+        android:text="Creation date:"
+        android:layout_marginHorizontal="10dp"/>
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/dateToday"
         android:enabled="false"
-        android:hint="Date" />
+        android:hint="Date"
+        android:layout_marginHorizontal="10dp"/>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Due Date" />
+        android:text="Due Date"
+        android:layout_marginHorizontal="10dp"/>
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Set due date"
-        android:id="@+id/dueDateTV" />
+        android:id="@+id/dueDateTV"
+        android:layout_marginHorizontal="10dp"/>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Due Time" />
+        android:text="Due Time"
+        android:layout_marginHorizontal="10dp"/>
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Set due time"
-        android:id="@+id/dueTimeTV" />
+        android:id="@+id/dueTimeTV"
+        android:layout_marginHorizontal="10dp"/>
 
 
     <TextView
@@ -56,12 +72,14 @@
         android:layout_height="wrap_content"
         android:text="\nRemind me in x before"
         android:id="@+id/reminderTV"
-        android:visibility="gone" />
+        android:visibility="gone"
+        android:layout_marginHorizontal="10dp"/>
     <LinearLayout
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         android:id="@+id/reminder"
-        android:orientation="horizontal" >
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="10dp">
 
         <EditText
             android:layout_width="wrap_content"
@@ -85,6 +103,8 @@
             android:id="@+id/remindMinutes"
             android:visibility="gone" />
     </LinearLayout>
+
+
 
     <!-- These are meant to be implemented later on
     <TextView
@@ -110,8 +130,15 @@
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Delete"
+        android:id="@+id/completeTaskButton"
+        android:text="Complete Task"
+        android:visibility="gone" />
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Delete task"
         android:visibility="gone"
-        android:id="@+id/delete" />
+        android:id="@+id/delete"
+        android:layout_marginHorizontal="10dp" />
 
 </LinearLayout>

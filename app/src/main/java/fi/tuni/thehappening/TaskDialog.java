@@ -8,12 +8,12 @@ import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.TimePicker;
 
@@ -23,9 +23,12 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Calendar;
 
-public class TaskDialog extends AppCompatDialogFragment {
+public class TaskDialog extends AppCompatDialogFragment implements OnFriendItemClick {
+    private ArrayList<Friend> friends;
+    private ArrayList<Friend> selectedFriends = new ArrayList<Friend>(0);
     private EditText remindInHours;
     private EditText remindInDays;
     private EditText remindInMinutes;
@@ -38,9 +41,14 @@ public class TaskDialog extends AppCompatDialogFragment {
     private LocalDate today = LocalDate.now();
     private LocalTime timeNow = LocalTime.now().truncatedTo(ChronoUnit.MINUTES);
     private OnNewTaskResult taskResult; // callback
+    private int taskId;
+    private String task_user_id;
+    private String current_user_id;
+    private ListView friendsLV;
 
     // Fetches task's data if it exists (flag is false) and sends the onward to onCreateDialog
-    public static TaskDialog newInstance(MainTask taskToEdit, boolean flag) {
+    public static TaskDialog newInstance(MainTask taskToEdit, ArrayList<Friend> friends,
+                                         boolean flag, String current_user_id) {
         TaskDialog fragment = new TaskDialog();
         int id = taskToEdit.getMainId();
         String title = taskToEdit.getTitle();
@@ -48,10 +56,14 @@ public class TaskDialog extends AppCompatDialogFragment {
         String creation = taskToEdit.getCreationDate().toString();
         String dueDate = taskToEdit.getDueDate().toString();
         String dueTime = taskToEdit.getDueTime().toString();
+        Boolean isDone = taskToEdit.getIsDone();
 
         Bundle bundle = new Bundle();
         bundle.putBoolean("flag", flag);
         bundle.putInt("id", id);
+        bundle.putParcelableArrayList("friends", friends);
+        bundle.putString("userId", taskToEdit.getSharedBy());
+        bundle.putString("currentUser", current_user_id);
 
         if (!flag) {
             bundle.putString("title", title);
@@ -59,10 +71,9 @@ public class TaskDialog extends AppCompatDialogFragment {
             bundle.putString("creation", creation);
             bundle.putString("dueDate", dueDate);
             bundle.putString("dueTime", dueTime);
+            bundle.putBoolean("isDone", isDone);
         }
-
         fragment.setArguments(bundle);
-
         return fragment;
     }
 
@@ -77,15 +88,26 @@ public class TaskDialog extends AppCompatDialogFragment {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         creationDate.setText(today.format(formatter));
 
+        friendsLV = (ListView) view.findViewById(R.id.taskFriendMonitor);
+
         titleET = (EditText) view.findViewById(R.id.title);
         descET = (EditText) view.findViewById(R.id.description);
+
         final TextView dueDateTV = (TextView) view.findViewById(R.id.dueDateTV);
         final TextView dueTimeTV = (TextView) view.findViewById(R.id.dueTimeTV);
-
+        task_user_id = getArguments().getString("userId");
+        current_user_id = getArguments().getString("currentUser");
         final boolean newTaskFlag = getArguments().getBoolean("flag");
         idTV = (TextView) view.findViewById(R.id.idTitle);
+        taskId = getArguments().getInt("id");
         final String id = String.valueOf(getArguments().getInt("id"));
-        idTV.setText(id);
+        idTV.setText("Task id: " + id);
+
+        friends = getArguments().getParcelableArrayList("friends");
+        FriendAdapter friendAdapter = new FriendAdapter(getContext(), friends, this);
+        friendsLV.setAdapter(friendAdapter);
+
+        boolean isDone = getArguments().getBoolean("isDone");
 
         remindInHours = (EditText) view.findViewById(R.id.remindHours);
         remindInDays = (EditText) view.findViewById(R.id.remindDays);
@@ -105,14 +127,18 @@ public class TaskDialog extends AppCompatDialogFragment {
             dueDateTV.setText(dueDate);
             dueTimeTV.setText(dueTime);
 
-            Button deleteButt = (Button) view.findViewById(R.id.delete);
-            deleteButt.setVisibility(View.VISIBLE);
-            deleteButt.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    taskResult.deleteTask(id);
-                }
-            });
+            if (!isDone) {
+                Button completeButt = (Button) view.findViewById(R.id.completeTaskButton);
+                completeButt.setVisibility(View.VISIBLE);
+                completeButt.setOnClickListener(v -> {
+                    taskResult.completeTask(id, task_user_id);
+                });
+            }
+            if (current_user_id.equals(task_user_id)) {
+                Button deleteButt = (Button) view.findViewById(R.id.delete);
+                deleteButt.setVisibility(View.VISIBLE);
+                deleteButt.setOnClickListener(v -> taskResult.deleteTask(id, task_user_id));
+            }
         } else {
             // The following is because alarm time editing is not yet implemented
             TextView remindTV = (TextView) view.findViewById(R.id.reminderTV);
@@ -137,7 +163,7 @@ public class TaskDialog extends AppCompatDialogFragment {
 
                 DatePickerDialog dialog = new DatePickerDialog(
                         getContext(),
-                        android.R.style.Theme,
+                        android.R.style.Theme_DeviceDefault_Dialog,
                         dateListener,
                         year, month, day);
                 dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -167,7 +193,7 @@ public class TaskDialog extends AppCompatDialogFragment {
 
                 TimePickerDialog timeDialog = new TimePickerDialog(
                         getContext(),
-                        android.R.style.Theme,
+                        android.R.style.Theme_DeviceDefault,
                         timeListener,
                         hour, minute, true);
 
@@ -199,13 +225,6 @@ public class TaskDialog extends AppCompatDialogFragment {
                         String creation = creationDate.getText().toString();
                         String dueDate = dueDateTV.getText().toString();
                         String dueTime = dueTimeTV.getText().toString();
-                        int id = Integer.parseInt(String.valueOf(idTV.getText()));
-
-
-                        Log.d("TAG", "Remind in days: " + remindInDays.getText().toString());
-                        Log.d("TAG", "Remind in hours: " + remindInHours.getText().toString());
-                        Log.d("TAG", "Remind in minutes: " + remindInMinutes.getText().toString());
-
 
                         // if user doesn't give any value to alarm reminder they're set to 0
                         int ad, ah, am;
@@ -220,8 +239,8 @@ public class TaskDialog extends AppCompatDialogFragment {
                         } else { am = 0; }
 
                         // sends the given data to MainActivity
-                        taskResult.finish(id, title, description, creation, dueDate, dueTime,
-                                    ad, ah, am);
+                        taskResult.edit(taskId, title, description, creation, dueDate, dueTime,
+                                    ad, ah, am, selectedFriends, task_user_id);
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -239,9 +258,31 @@ public class TaskDialog extends AppCompatDialogFragment {
         taskResult = result;
     }
     public interface OnNewTaskResult{
-        void finish(int id, String title, String description,
-                    String creation, String dueDt, String dueTm,
-                    int alarmDs, int alarmHr, int alarmMin);
-        void deleteTask(String id);
+        void edit(int id, String title, String description,
+                  String creation, String dueDt, String dueTm,
+                  int alarmDs, int alarmHr, int alarmMin,
+                  ArrayList<Friend> selectedFriends, String sharedBy);
+        void deleteTask(String id, String sharedBy);
+        void completeTask(String id, String sharedBy);
     }
+
+
+    @Override
+    public void onAcceptClick(int position) { }
+
+    @Override
+    public void onDeclineClick(int position) { }
+
+    @Override
+    public void onCheckBoxClicked(int position, boolean flag) {
+        if (flag) {
+            Friend tmpFriend = friends.get(position);
+            selectedFriends.add(tmpFriend);
+        } else {
+            Friend tmpFriend = friends.get(position);
+            selectedFriends.remove(tmpFriend);
+        }
+    }
+
+
 }
