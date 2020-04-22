@@ -15,6 +15,11 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A custom adapter to view your friends and choose them with a checkbox
+ * for sharing tasks with
+ */
+
 public class FriendAdapter extends ArrayAdapter<Friend> {
     private Context mContext;
     private List<Friend> friendList = new ArrayList<>();

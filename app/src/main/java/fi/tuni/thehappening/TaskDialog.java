@@ -46,7 +46,7 @@ public class TaskDialog extends AppCompatDialogFragment implements OnFriendItemC
     private String current_user_id;
     private ListView friendsLV;
 
-    // Fetches task's data if it exists (flag is false) and sends the onward to onCreateDialog
+    // Fetches task's data if it exists (flag is false) and sends them onward to onCreateDialog
     public static TaskDialog newInstance(MainTask taskToEdit, ArrayList<Friend> friends,
                                          boolean flag, String current_user_id) {
         TaskDialog fragment = new TaskDialog();

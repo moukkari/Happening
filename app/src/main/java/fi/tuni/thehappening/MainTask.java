@@ -1,11 +1,9 @@
 package fi.tuni.thehappening;
 
 /**
- * A class to make task objects
- * These objects are meant to be sent to a SQL? database
- *
- * To be added:
- * - Alarm dates
+ * A class to make original task objects
+ * Differs from FireBaseTask so that it uses LocalDate and LocalTime
+ * instead of POJO objects
  */
 
 import java.time.LocalDate;

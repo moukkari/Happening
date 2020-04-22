@@ -27,6 +27,11 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 
+/**
+ * A dialog for sending and accepting friend requests
+ * You can see your current friends also
+ */
+
 public class FriendsDialog extends AppCompatDialogFragment implements OnFriendItemClick {
     private ListView requestLV;
     private ListView friendsLV;
@@ -90,6 +95,8 @@ public class FriendsDialog extends AppCompatDialogFragment implements OnFriendIt
                                 Toast.makeText(getContext(), "Sent friend request", Toast.LENGTH_SHORT).show();
                             } else {
                                 Toast.makeText(getContext(), "No match", Toast.LENGTH_SHORT).show();
+
+                                // Asks user if s/he wants to send an email invitation to use the app
                                 AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
                                 builder.setTitle("User not found.");
                                 builder.setMessage("Want to send an email invitation?");
@@ -154,9 +161,9 @@ public class FriendsDialog extends AppCompatDialogFragment implements OnFriendIt
         requestLV.setAdapter(requestAdapter);
     }
 
+    // Provides discussion between MainActivity and FriendsDialog
     @Override
     public void onCheckBoxClicked(int position, boolean flag) { }
-
     public void setFriends(OnNewFriends result){
         requestsResult = result;
     }

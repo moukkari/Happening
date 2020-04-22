@@ -20,7 +20,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/friendRequest"
-            android:text="tyrkkoilmari@gmail.com"
             android:hint="Friends email" />
         <Button
             android:layout_width="wrap_content"
@@ -33,12 +32,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/friendsMonitor"/>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/requestInfo"
-        android:text="Teksti" />
 
 
 

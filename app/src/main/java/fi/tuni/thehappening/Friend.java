@@ -3,6 +3,10 @@ package fi.tuni.thehappening;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+/**
+ * A class to make friend objects used to send data to right places in database
+ * Implements Parcelable so it can be passed on in a bundle
+ */
 public class Friend implements Parcelable {
     String key;
     String mail;
@@ -16,7 +20,6 @@ public class Friend implements Parcelable {
     public String getMail() {
         return this.mail;
     }
-
 
     // Parcelling part
     public Friend(Parcel in){

@@ -1,10 +1,7 @@
 package fi.tuni.thehappening;
 /**
- * A class to make task objects
- * These objects are meant to be sent to a SQL? database
- *
- * To be added:
- * - Alarm dates
+ * A class to make task objects for sending to Firebase database
+ * Differs from MainTask so that it uses POJO Objects that Firebase understands
  */
 public class FireBaseTask {
     private int mainId;

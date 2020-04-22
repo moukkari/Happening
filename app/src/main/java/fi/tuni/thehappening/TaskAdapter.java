@@ -6,7 +6,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.LayoutRes;
@@ -16,11 +15,16 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A custom adapter view for viewing tasks on the Mainlayout
+ */
+
 public class TaskAdapter extends ArrayAdapter<MainTask> {
     private Context mContext;
     private List<MainTask> taskList = new ArrayList<>();
 
-    public TaskAdapter(@NonNull Context context, @SuppressLint("SupportAnnotationUsage") @LayoutRes ArrayList<MainTask> list) {
+    public TaskAdapter(@NonNull Context context,
+                       @SuppressLint("SupportAnnotationUsage") @LayoutRes ArrayList<MainTask> list) {
         super(context, 0, list);
         mContext = context;
         taskList = list;

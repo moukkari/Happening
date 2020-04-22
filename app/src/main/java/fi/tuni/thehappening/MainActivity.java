@@ -61,20 +61,27 @@ public class MainActivity extends AppCompatActivity {
     // Firebase stuff here
     private GoogleSignInClient mGoogleSignInClient;
     private static final int RC_SIGN_IN = 9001;
+    // A variable to set the database address
     private DatabaseReference reference;
-    // [START declare_auth]
+    // Firebase authentication
     private FirebaseAuth mAuth;
-    // [END declare_auth]
-    public String user_id;
+
+    // Variables to get current users id and mail address
+    private String user_id;
     private String user_mail;
 
+    // Local arrays to keep user's data in
     private ArrayList<Friend> REQUESTS = new ArrayList<Friend>(0);
     private ArrayList<Friend> FRIENDS = new ArrayList<Friend>(0);
     private ArrayList<MainTask> LOCALDATABASE = new ArrayList<MainTask>(0);
     private ArrayList<MainTask> SHAREDTASKS = new ArrayList<MainTask>(0);
     private ArrayList<MainTask> COMPLETEDTASKS = new ArrayList<MainTask>(0);
+
+    // Current users database's tasks biggest id number
+    // It's set again every time a new task is created
     private int BIGGEST_ID = 0;
 
+    // UI Stuff
     private TextView loginStatusTV, infoTV;
     private Button signoutButton, addTaskButton, friendsButton;
     private SignInButton signinButton;
@@ -83,10 +90,12 @@ public class MainActivity extends AppCompatActivity {
     private ListView taskLV;
     private ListView sharedTaskLV;
     private ListView completedTaskLV;
+
+    // Provides time info when creating a new task
     private LocalDate dateNow = LocalDate.now();
     private LocalTime timeNow = LocalTime.now().truncatedTo(ChronoUnit.MINUTES);
 
-
+    // Sets the layout and sets GoogleAuthentication Options
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -132,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
     }
 
+    // Sets the UI according to Firebase user status
     @Override
     public void onStart() {
         super.onStart();
@@ -139,15 +149,17 @@ public class MainActivity extends AppCompatActivity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         updateUI(currentUser);
     }
+
+    // Starts the sign in process to with Google authentication
     public void signInClicked(View v) {
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }
+
+    // Listens for google authentication result and starts firebase sign in if successful
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
-
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
         if (requestCode == RC_SIGN_IN) {
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
@@ -160,8 +172,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+    // Signs in to Firebase database
     private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
-
         AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
         mAuth.signInWithCredential(credential)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
@@ -176,11 +188,11 @@ public class MainActivity extends AppCompatActivity {
                             Toast.makeText(getApplicationContext(), "Authentication failed", Toast.LENGTH_SHORT).show();
                             updateUI(null);
                         }
-
-                        // ...
                     }
                 });
     }
+
+    // Signs out of Google and Firebase
     public void signOut(View v) {
         // Firebase sign out
         mAuth.signOut();
@@ -194,10 +206,13 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
     }
+
+    // Updates the UI if user has signed in or not
+    // If user has signed in, this calls retrieveDataFromFirebase()
+    // and databaseSetUp() to get users data from the database
     private void updateUI(FirebaseUser user) {
         if (user != null) {
             loginStatusTV.setText("Logged in as " + user.getEmail());
-
             signinButton.setVisibility(View.GONE);
             signoutButton.setVisibility(View.VISIBLE);
             addTaskButton.setVisibility(View.VISIBLE);
@@ -207,7 +222,6 @@ public class MainActivity extends AppCompatActivity {
             completedTaskLV.setVisibility(View.VISIBLE);
             retrieveDataFromFirebase();
             databaseSetUp();
-
         } else {
             loginStatusTV.setText("Not logged in.");
             LOCALDATABASE.clear();
@@ -220,9 +234,9 @@ public class MainActivity extends AppCompatActivity {
             sharedTaskLV.setVisibility(View.GONE);
             taskLV.setVisibility(View.GONE);
             completedTaskLV.setVisibility(View.GONE);
-
         }
     }
+    // First fetches tasks that are shared with user and after that fetches users own tasks
     public void retrieveDataFromFirebase() {
         user_id = mAuth.getCurrentUser().getUid();
         user_mail = mAuth.getCurrentUser().getEmail();
@@ -267,9 +281,12 @@ public class MainActivity extends AppCompatActivity {
                                     if (!tmpTask.getIsDone()) {
                                         SHAREDTASKS.add(tmpTask);
                                     } else {
-                                        if (!COMPLETEDTASKS.contains(tmpTask)) {
-                                            COMPLETEDTASKS.add(tmpTask);
+                                        for (MainTask task : COMPLETEDTASKS) {
+                                            if (task.getMainId() == tmpTask.getMainId() && task.getSharedBy().equals(tmpTask.getSharedBy())) {
+                                                COMPLETEDTASKS.remove(task);
+                                            }
                                         }
+                                        COMPLETEDTASKS.add(tmpTask);
                                     }
 
                                     updateTaskMonitor();
@@ -324,9 +341,12 @@ public class MainActivity extends AppCompatActivity {
                     if (!tmpTask.getIsDone()) {
                         LOCALDATABASE.add(tmpTask);
                     } else {
-                        if (!COMPLETEDTASKS.contains(tmpTask)) {
-                            COMPLETEDTASKS.add(tmpTask);
+                        for (MainTask task : COMPLETEDTASKS) {
+                            if (task.getMainId() == tmpTask.getMainId() && task.getSharedBy().equals(tmpTask.getSharedBy())) {
+                                COMPLETEDTASKS.remove(task);
+                            }
                         }
+                        COMPLETEDTASKS.add(tmpTask);
                     }
 
                     updateTaskMonitor();
@@ -338,7 +358,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // Adds current user to (Firebase) database and fetches user's friends
+    // Adds current user to (Firebase) database and fetches user's friends and friend requests
     public void databaseSetUp() {
         reference = FirebaseDatabase.getInstance().getReference().child("users");
         reference.child(user_id).setValue(user_mail);
@@ -379,6 +399,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    // Starts a dialog where you can send friend requests and see your current friends
+    // when Friends button is clicked
     public void showFriends(View v) {
         friendsDialog = new FriendsDialog().newInstance(REQUESTS, FRIENDS, user_id, user_mail);
         friendsDialog.show(getSupportFragmentManager(), "Edit friends");
@@ -470,7 +492,7 @@ public class MainActivity extends AppCompatActivity {
         updateTaskMonitor();
     }
 
-    // Updates the list of tasks
+    // Updates the lists of tasks
     // Clicking a task opens editTask where you can edit the task
     public void updateTaskMonitor() {
         TaskAdapter completedAdapter = new TaskAdapter(this, COMPLETEDTASKS);

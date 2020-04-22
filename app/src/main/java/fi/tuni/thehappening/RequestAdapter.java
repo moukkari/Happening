@@ -17,12 +17,19 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A custom adapter view for friend requests
+ * It is given the context, the request list and a callback listener
+ * for accepting or declining the request
+ */
 public class RequestAdapter extends ArrayAdapter<Friend> {
     private Context mContext;
     private List<Friend> requestList = new ArrayList<>();
     private OnFriendItemClick callBack;
 
-    public RequestAdapter(@NonNull Context context, @SuppressLint("SupportAnnotationUsage") @LayoutRes ArrayList<Friend> list, OnFriendItemClick listener) {
+    public RequestAdapter(@NonNull Context context,
+                          @SuppressLint("SupportAnnotationUsage") @LayoutRes ArrayList<Friend> list,
+                          OnFriendItemClick listener) {
         super(context, 0, list);
         mContext = context;
         requestList = list;
@@ -49,14 +56,12 @@ public class RequestAdapter extends ArrayAdapter<Friend> {
         acceptButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d("TAG", "Accept clicked");
                 callBack.onAcceptClick(position);
             }
         });
         declineButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d("TAG", "Decline clicked");
                 callBack.onDeclineClick(position);
             }
         });
